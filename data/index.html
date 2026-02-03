@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RC Araba Kontrol Paneli</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- NippleJS Joystick Kütüphanesi (Local) -->
+    <script src="nipplejs.min.js"></script>
+    <link rel="icon" href="favicon.ico" type="image/x-icon">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1><i class="fas fa-car"></i> RC Araba Kontrol Paneli</h1>
+            <div class="status-bar">
+                <div class="status-item">
+                    <span class="status-label">Bağlantı:</span>
+                    <span id="connectionStatus" class="status-value connected">
+                        <i class="fas fa-wifi"></i> Bağlı
+                    </span>
+                </div>
+                <div class="status-item">
+                    <span class="status-label">Hız:</span>
+                    <span id="speedValue" class="status-value">150</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-label">IP:</span>
+                    <span id="ipAddress" class="status-value">Bağlanıyor...</span>
+                </div>
+            </div>
+        </header>
+
+        <main>
+            <!-- Navigation -->
+            <div style="display: flex; gap: 10px; justify-content: center; margin-bottom: 20px;">
+                <button style="padding: 10px 20px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; background: #3498db; color: white; transition: all 0.3s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'"><i class="fas fa-th"></i> Buton Kontrol</button>
+                <a href="joystick.html" style="padding: 10px 20px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; background: #95a5a6; color: white; text-decoration: none; transition: all 0.3s; display: inline-block;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'"><i class="fas fa-gamepad"></i> Joystick Kontrol</a>
+            </div>
+
+            <!-- Kontrol Butonları -->
+            <div class="control-section">
+                <h2><i class="fas fa-gamepad"></i> Kontrol</h2>
+                <div class="control-grid">
+                    <!-- İlk satır -->
+                    <div class="empty"></div>
+                    <button class="control-btn primary" id="btnForward" onmousedown="startCommand('forward')" ontouchstart="startCommand('forward')" onmouseup="stopCommand()" ontouchend="stopCommand()">
+                        <i class="fas fa-arrow-up"></i>
+                    </button>
+                    <div class="empty"></div>
+                    
+                    <!-- İkinci satır -->
+                    <button class="control-btn primary" id="btnLeft" onmousedown="startCommand('left')" ontouchstart="startCommand('left')" onmouseup="stopCommand()" ontouchend="stopCommand()">
+                        <i class="fas fa-arrow-left"></i>
+                    </button>
+                    <button class="control-btn danger" id="btnStop" onclick="carController.emergencyStop()">
+                        <i class="fas fa-stop"></i>
+                    </button>
+                    <button class="control-btn primary" id="btnRight" onmousedown="startCommand('right')" ontouchstart="startCommand('right')" onmouseup="stopCommand()" ontouchend="stopCommand()">
+                        <i class="fas fa-arrow-right"></i>
+                    </button>
+                    
+                    <!-- Üçüncü satır -->
+                    <div class="empty"></div>
+                    <button class="control-btn primary" id="btnBackward" onmousedown="startCommand('backward')" ontouchstart="startCommand('backward')" onmouseup="stopCommand()" ontouchend="stopCommand()">
+                        <i class="fas fa-arrow-down"></i>
+                    </button>
+                    <div class="empty"></div>
+                </div>
+            </div>
+            
+            <!-- Hız Kontrolü -->
+            <div class="speed-control">
+                <h3><i class="fas fa-tachometer-alt"></i> Hız</h3>
+                <div class="slider-container">
+                    <input type="range" min="0" max="255" value="150" 
+                           class="speed-slider" id="speedSlider"
+                           oninput="updateSpeed(this.value)">
+                    <span id="currentSpeedDisplay">150</span>
+                </div>
+            </div>
+            
+            <!-- Sistem Durumu -->
+            <div class="info-section">
+                <h3><i class="fas fa-info-circle"></i> Durum</h3>
+                <p><strong>WiFi SSID:</strong> RC_Araba_AP</p>
+                <p><strong>Şifre:</strong> 12345678</p>
+                <p><strong>IP Adresi:</strong> <span id="ipAddress">Bağlanıyor...</span></p>
+            </div>
+        </main>
+        
+        <footer>
+            <p>© 2024 RC Araba Projesi | WebSocket Bağlantısı: <span id="wsStatus">Bağlanıyor...</span></p>
+            <p class="hint"><i class="fas fa-lightbulb"></i> İpucu: Mobil cihazlarda yatay mod daha iyi kontrol sağlar</p>
+        </footer>
+    </div>
+
+    <!-- Sistem Mesajları -->
+    <div id="toast" class="toast"></div>
+
+    <script src="script.js"></script>
+</body>
+</html>

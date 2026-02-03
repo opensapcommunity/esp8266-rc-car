@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RC Araba - Joystick Kontrol</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="nipplejs.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 10px;
+            color: #333;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 100%;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.85);
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            overflow: hidden;
+        }
+
+        /* Header */
+        header {
+            background: linear-gradient(to right, rgba(74, 111, 165, 0.9), rgba(44, 62, 80, 0.9));
+            color: white;
+            padding: 10px 20px;
+            text-align: center;
+        }
+
+        header h1 {
+            font-size: 1.3rem;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .status-bar {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            flex-wrap: wrap;
+            background: rgba(255, 255, 255, 0.15);
+            padding: 8px;
+            border-radius: 8px;
+            font-size: 0.8rem;
+        }
+
+        .status-item {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .status-label {
+            opacity: 0.8;
+        }
+
+        .status-value {
+            font-weight: bold;
+            padding: 2px 10px;
+            border-radius: 4px;
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .status-value.connected {
+            background: rgba(46, 204, 113, 0.3);
+            color: #27ae60;
+        }
+
+        /* Main Content */
+        main {
+            padding: 15px;
+            display: flex;
+            flex-direction: row;
+            gap: 15px;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .nav-buttons {
+            display: none; /* Yatay modda yer kaplamıyor */
+        }
+
+        .nav-btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            background: #95a5a6;
+            color: white;
+        }
+
+        .nav-btn.active {
+            background: #3498db;
+        }
+
+        .nav-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Joystick Container */
+        .joystick-section {
+            display: flex;
+            flex-direction: row;
+            gap: 20px;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+        }
+
+        .joystick-group {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            flex: 1;
+        }
+
+        .joystick-group h2 {
+            color: rgba(44, 62, 80, 0.9);
+            font-size: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .joystick-wrapper {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .zone {
+            width: 280px;
+            height: 280px;
+            background: linear-gradient(135deg, rgba(248, 249, 250, 0.6) 0%, rgba(233, 236, 239, 0.8) 100%);
+            border: 4px solid rgba(52, 152, 219, 0.4);
+            border-radius: 50%;
+            position: relative;
+            box-shadow: 0 6px 20px rgba(52, 152, 219, 0.3), inset 0 2px 10px rgba(0, 0, 0, 0.1);
+            touch-action: none;
+        }
+
+        .zone#zone-vertical {
+            border-color: rgba(46, 204, 113, 0.5);
+            box-shadow: 0 6px 20px rgba(46, 204, 113, 0.3), inset 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .zone#zone-horizontal {
+            border-color: rgba(231, 76, 60, 0.5);
+            box-shadow: 0 6px 20px rgba(231, 76, 60, 0.3), inset 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .joystick-label {
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(44, 62, 80, 0.75);
+            color: white;
+            padding: 4px 12px;
+            border-radius: 15px;
+            font-size: 0.75rem;
+            font-weight: bold;
+            white-space: nowrap;
+        }
+
+        .zone#zone-vertical .joystick-label {
+            background: rgba(46, 204, 113, 0.8);
+        }
+
+        .zone#zone-horizontal .joystick-label {
+            background: rgba(231, 76, 60, 0.8);
+        }
+
+        .output {
+            font-family: 'Courier New', monospace;
+            font-size: 0.75rem;
+            white-space: pre-wrap;
+            word-break: break-word;
+            background: rgba(44, 62, 80, 0.85);
+            color: #2ecc71;
+            padding: 10px;
+            border-radius: 8px;
+            min-height: 60px;
+            width: 100%;
+            max-width: 280px;
+            text-shadow: 0 0 3px rgba(46, 204, 113, 0.4);
+        }
+
+        .output#output-vertical {
+            border: 2px solid rgba(46, 204, 113, 0.5);
+        }
+
+        .output#output-horizontal {
+            border: 2px solid rgba(231, 76, 60, 0.5);
+        }
+
+        /* Status Panel */
+        .status-panel {
+            display: none; /* Yatay modda gizli */
+        }
+
+        /* Footer */
+        footer {
+            background: rgba(44, 62, 80, 0.9);
+            color: white;
+            padding: 8px 15px;
+            text-align: center;
+            border-top: 2px solid rgba(52, 152, 219, 0.5);
+            font-size: 0.7rem;
+        }
+
+        footer p {
+            margin: 4px 0;
+        }
+
+        /* Toast */
+        .toast {
+            position: fixed;
+            bottom: 15px;
+            right: 15px;
+            background: rgba(44, 62, 80, 0.95);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            transform: translateY(100px);
+            opacity: 0;
+            transition: all 0.3s ease;
+            z-index: 1000;
+            max-width: 90vw;
+            font-size: 0.8rem;
+        }
+
+        .toast.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        /* Responsive - Mobil Yatay Mod Optimizasyonu */
+        @media (max-width: 900px) and (orientation: landscape) {
+            header h1 {
+                font-size: 1rem;
+            }
+
+            .status-bar {
+                font-size: 0.7rem;
+                gap: 10px;
+                padding: 5px;
+            }
+
+            .zone {
+                width: 220px;
+                height: 220px;
+            }
+
+            main {
+                padding: 10px;
+                gap: 10px;
+            }
+
+            .joystick-group h2 {
+                font-size: 0.85rem;
+            }
+
+            .output {
+                font-size: 0.65rem;
+                padding: 8px;
+                min-height: 50px;
+                max-width: 220px;
+            }
+
+            footer {
+                font-size: 0.65rem;
+                padding: 5px 10px;
+            }
+        }
+
+        /* Dikey mod için düzenleme */
+        @media (max-width: 480px) and (orientation: portrait) {
+            main {
+                flex-direction: column;
+            }
+
+            .joystick-section {
+                flex-direction: column;
+            }
+
+            .zone {
+                width: 200px;
+                height: 200px;
+            }
+
+            .status-panel {
+                display: block;
+                background: rgba(255, 255, 255, 0.7);
+                padding: 15px;
+                border-radius: 10px;
+                border: 1px solid rgba(233, 236, 239, 0.5);
+            }
+
+            .nav-buttons {
+                display: flex;
+                gap: 8px;
+                margin-bottom: 15px;
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1><i class="fas fa-car"></i> RC Araba - Joystick Kontrol</h1>
+            <div class="status-bar">
+                <div class="status-item">
+                    <span class="status-label">Bağlantı:</span>
+                    <span id="connectionStatus" class="status-value connected">
+                        <i class="fas fa-wifi"></i> Bağlı
+                    </span>
+                </div>
+                <div class="status-item">
+                    <span class="status-label">Hız:</span>
+                    <span id="speedValue" class="status-value">150</span>
+                </div>
+            </div>
+        </header>
+
+        <main>
+            <!-- Navigation -->
+            <div class="nav-buttons">
+                <a href="index.html" class="nav-btn"><i class="fas fa-th"></i> Buton Kontrol</a>
+                <button class="nav-btn active"><i class="fas fa-gamepad"></i> Joystick Kontrol</button>
+            </div>
+
+            <!-- Joystick Sections -->
+            <div class="joystick-section">
+                <!-- Vertical Joystick (Forward/Backward) -->
+                <div class="joystick-group">
+                    <h2><i class="fas fa-arrow-up"></i> İleri / Geri</h2>
+                    <div class="joystick-wrapper">
+                        <div id="zone-vertical" class="zone">
+                            <div class="joystick-label">İleri/Geri</div>
+                        </div>
+                        <div id="output-vertical" class="output">Hareketi bekliyorum...</div>
+                    </div>
+                </div>
+
+                <!-- Horizontal Joystick (Left/Right) -->
+                <div class="joystick-group">
+                    <h2><i class="fas fa-arrow-right"></i> Sağ / Sol</h2>
+                    <div class="joystick-wrapper">
+                        <div id="zone-horizontal" class="zone">
+                            <div class="joystick-label">Sağ/Sol</div>
+                        </div>
+                        <div id="output-horizontal" class="output">Hareketi bekliyorum...</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Status Panel -->
+            <div class="status-panel">
+                <h3><i class="fas fa-info-circle"></i> Sistem Durumu</h3>
+                <p><strong>WiFi SSID:</strong> RC_Araba_AP</p>
+                <p><strong>Şifre:</strong> 12345678</p>
+                <p><strong>IP Adresi:</strong> <span id="ipAddress">Bağlanıyor...</span></p>
+            </div>
+        </main>
+
+        <footer>
+            <p>© 2024 RC Araba Projesi | WebSocket Bağlantısı: <span id="wsStatus">Bağlanıyor...</span></p>
+            <p><i class="fas fa-lightbulb"></i> İpucu: Joystick'leri sürükle ve konumlarını gözle</p>
+        </footer>
+    </div>
+
+    <!-- Toast -->
+    <div id="toast" class="toast"></div>
+
+    <script src="joystick.js"></script>
+</body>
+</html>
