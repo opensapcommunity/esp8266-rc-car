@@ -5,12 +5,14 @@
 #include <WebSocketsServer.h>
 #include <ArduinoJson.h>
 #include "MotorController.h"
+#include "AudioManager.h"
 
 class WebServerManager {
 private:
     AsyncWebServer* server;
     WebSocketsServer* webSocket;
     MotorController* motor;
+    AudioManager* audio;
     
     const int webSocketPort = 81;
     
@@ -20,7 +22,7 @@ private:
     void handleNotFound(AsyncWebServerRequest* request);
     
 public:
-    WebServerManager(MotorController* motorController);
+    WebServerManager(MotorController* motorController, AudioManager* audioManager);
     void begin();
     void loop();
     

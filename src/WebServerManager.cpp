@@ -4,8 +4,9 @@
 // Static pointer for WebSocket callback
 static WebServerManager* instance = nullptr;
 
-WebServerManager::WebServerManager(MotorController* motorController) {
+WebServerManager::WebServerManager(MotorController* motorController, AudioManager* audioManager) {
     motor = motorController;
+    audio = audioManager;
     server = new AsyncWebServer(80);
     webSocket = new WebSocketsServer(webSocketPort);
     
@@ -96,7 +97,7 @@ void WebServerManager::handleNotFound(AsyncWebServerRequest* request) {
 void WebServerManager::handleWebSocketMessage(uint8_t num, uint8_t* payload, size_t length) {
     String message = String((char*)payload).substring(0, length);
     
-    StaticJsonDocument<200> doc;
+    StaticJsonDocument<256> doc;
     deserializeJson(doc, message);
     
     String cmd = doc["cmd"];
@@ -130,6 +131,19 @@ void WebServerManager::handleWebSocketMessage(uint8_t num, uint8_t* payload, siz
         Serial.println("smoothTurn çağrılıyor...");
         motor->smoothTurn(leftSpeed, rightSpeed);
         Serial.println("smoothTurn tamamlandı");
+    } else if (cmd == "sound") {
+        String action = doc["action"] | "";
+        if (!audio || !audio->isReady()) {
+            Serial.println("DFPlayer hazır değil");
+        } else if (action == "horn") {
+            audio->playHorn();
+        } else if (action == "siren") {
+            audio->playSiren();
+        } else if (action == "song_next") {
+            audio->playNextSong();
+        } else if (action == "stop") {
+            audio->stop();
+        }
     }
     
     // Geri bildirim gönder

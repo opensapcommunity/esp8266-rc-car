@@ -74,6 +74,33 @@
             font-size: 12px;
             max-width: 200px;
         }
+
+        .sound-panel {
+            position: fixed;
+            bottom: 15px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 10px;
+            background: rgba(0,0,0,0.4);
+            padding: 10px 12px;
+            border-radius: 12px;
+            backdrop-filter: blur(6px);
+        }
+
+        .sound-btn {
+            background: rgba(255,255,255,0.9);
+            border: none;
+            border-radius: 8px;
+            padding: 8px 12px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .sound-btn.stop {
+            background: rgba(231,76,60,0.9);
+            color: white;
+        }
         
         @media (orientation: portrait) {
             .container {
@@ -103,11 +130,23 @@
             <div class="label">Sağ/Sol</div>
         </div>
     </div>
+
+    <div class="sound-panel">
+        <button class="sound-btn" onclick="sendSound('horn')">Korna</button>
+        <button class="sound-btn" onclick="sendSound('siren')">Siren</button>
+        <button class="sound-btn" onclick="sendSound('song_next')">Şarkı</button>
+        <button class="sound-btn stop" onclick="sendSound('stop')">Durdur</button>
+    </div>
     
     <script>
         // WebSocket bağlantısı
         let ws = null;
         let wsConnected = false;
+
+        function sendSound(action) {
+            if (!wsConnected) return;
+            ws.send(JSON.stringify({ cmd: "sound", action: action }));
+        }
         
         function connectWS() {
             const wsUrl = `ws://${window.location.hostname}:81`;

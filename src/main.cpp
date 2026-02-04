@@ -7,22 +7,28 @@
 #include "MotorController.h"
 #include "WiFiManager.h"
 #include "WebServerManager.h"
+#include "AudioManager.h"
 
 // Pin Tanımlamaları - TB6612FNG için
 #define PWMA D1  // GPIO5 - Sol motor PWM
 #define AIN1 D2  // GPIO4 - Sol motor IN1
 #define AIN2 D3  // GPIO0 - Sol motor IN2
 
-#define PWMB D5  // GPIO14 - Sağ motor PWM
-#define BIN1 D6  // GPIO12 - Sağ motor IN1
-#define BIN2 D7  // GPIO13 - Sağ motor IN2
+#define PWMB D7  // GPIO13 - Sağ motor PWM (D5 boşaltıldı)
+#define BIN1 D0  // GPIO16 - Sağ motor IN1 (D6 boşaltıldı)
+#define BIN2 D8  // GPIO15 - Sağ motor IN2
 
 #define STBY D4  // GPIO2 - Standby pin
+
+// DFPlayer Pinleri
+#define DFPLAYER_RX D5  // ESP RX (DFPlayer TX)
+#define DFPLAYER_TX D6  // ESP TX (DFPlayer RX)
 
 // Global nesneler
 MotorController* motor;
 WiFiManager* wifi;
 WebServerManager* webServer;
+AudioManager* audio;
 
 void setupOTA() {
     // OTA (Over-The-Air) Güncelleme Ayarları
@@ -76,6 +82,10 @@ void setup() {
     motor = new MotorController(PWMA, AIN1, AIN2, PWMB, BIN1, BIN2, STBY);
     motor->begin();
     motor->setSpeed(150); // Varsayılan hız
+
+    // DFPlayer başlat
+    audio = new AudioManager(DFPLAYER_RX, DFPLAYER_TX);
+    audio->begin();
     
     // WiFi başlat
     wifi = new WiFiManager();
@@ -105,7 +115,7 @@ void setup() {
     setupOTA();
     
     // Web server başlat
-    webServer = new WebServerManager(motor);
+    webServer = new WebServerManager(motor, audio);
     webServer->begin();
     
     Serial.println("\nSistem Hazır!");

@@ -100,6 +100,36 @@ class RCCarController {
             }
         }
     }
+
+    sendSoundCommand(action) {
+        if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+            this.showToast('Bağlantı yok!', 'error');
+            return;
+        }
+
+        const message = JSON.stringify({ cmd: 'sound', action: action });
+        this.ws.send(message);
+    }
+
+    playHorn() {
+        this.sendSoundCommand('horn');
+        this.showToast('Korna çalınıyor', 'info');
+    }
+
+    playSiren() {
+        this.sendSoundCommand('siren');
+        this.showToast('Siren çalınıyor', 'warning');
+    }
+
+    playNextSong() {
+        this.sendSoundCommand('song_next');
+        this.showToast('Şarkı değiştirildi', 'info');
+    }
+
+    stopSound() {
+        this.sendSoundCommand('stop');
+        this.showToast('Ses durduruldu', 'error');
+    }
     
     sendCommand(command, value = null) {
         console.log(`sendCommand çağrıldı: ${command}`, value);

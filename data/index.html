@@ -80,6 +80,29 @@
                     <span id="currentSpeedDisplay">150</span>
                 </div>
             </div>
+
+            <!-- Ses Kontrolü -->
+            <div class="sound-control">
+                <h3><i class="fas fa-volume-up"></i> Ses</h3>
+                <div class="sound-grid">
+                    <button class="control-btn primary" id="btnHorn" onclick="carController.playHorn()">
+                        <i class="fas fa-bullhorn"></i>
+                        <span>Korna</span>
+                    </button>
+                    <button class="control-btn warning" id="btnSiren" onclick="carController.playSiren()">
+                        <i class="fas fa-siren-on"></i>
+                        <span>Siren</span>
+                    </button>
+                    <button class="control-btn secondary" id="btnSong" onclick="carController.playNextSong()">
+                        <i class="fas fa-music"></i>
+                        <span>Şarkı</span>
+                    </button>
+                    <button class="control-btn danger" id="btnSoundStop" onclick="carController.stopSound()">
+                        <i class="fas fa-volume-mute"></i>
+                        <span>Durdur</span>
+                    </button>
+                </div>
+            </div>
             
             <!-- Sistem Durumu -->
             <div class="info-section">

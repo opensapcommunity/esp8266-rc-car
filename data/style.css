@@ -224,6 +224,37 @@ main {
     text-align: right;
 }
 
+/* Ses Kontrolü */
+.sound-control {
+    background: white;
+    padding: 25px;
+    border-radius: 15px;
+    border: 1px solid #e9ecef;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+}
+
+.sound-control h3 {
+    color: #2c3e50;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 1.2rem;
+}
+
+.sound-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+}
+
+.sound-grid .control-btn {
+    min-height: 70px;
+    font-size: 1rem;
+    flex-direction: column;
+    gap: 6px;
+}
+
 /* Keyboard Yardımı - KALDIRIYORUZ */
 .keyboard-help {
     display: none;
