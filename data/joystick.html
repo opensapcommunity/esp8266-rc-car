@@ -540,12 +540,20 @@
                 
                 let deltaX = clientX - centerX;
                 let deltaY = clientY - centerY;
-                
+
                 const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
                 if (distance > maxDistance) {
                     const angle = Math.atan2(deltaY, deltaX);
                     deltaX = Math.cos(angle) * maxDistance;
                     deltaY = Math.sin(angle) * maxDistance;
+                }
+
+                if (isVertical) {
+                    deltaX = 0;
+                    deltaY = Math.max(-maxDistance, Math.min(maxDistance, deltaY));
+                } else {
+                    deltaY = 0;
+                    deltaX = Math.max(-maxDistance, Math.min(maxDistance, deltaX));
                 }
                 
                 stick.style.transform = `translate(calc(-50% + ${deltaX}px), calc(-50% + ${deltaY}px))`;
