@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Joystick Kontrol</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: Arial, sans-serif;
+            color: white;
+            overflow: hidden;
+            height: 100vh;
+        }
+        
+        .container {
+            display: flex;
+            height: 100vh;
+            align-items: center;
+            justify-content: space-around;
+            padding: 20px;
+        }
+        
+        .joystick-zone {
+            width: 250px;
+            height: 250px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            position: relative;
+            touch-action: none;
+        }
+        
+        .joystick {
+            width: 100px;
+            height: 100px;
+            background: rgba(255, 255, 255, 0.8);
+            border-radius: 50%;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            transition: background 0.1s;
+        }
+        
+        .joystick:active {
+            background: rgba(255, 255, 255, 1);
+        }
+        
+        .label {
+            position: absolute;
+            bottom: -40px;
+            width: 100%;
+            text-align: center;
+            font-size: 18px;
+            font-weight: bold;
+        }
+        
+        .info {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            background: rgba(0,0,0,0.5);
+            padding: 10px;
+            border-radius: 5px;
+            font-size: 12px;
+            max-width: 200px;
+        }
+        
+        @media (orientation: portrait) {
+            .container {
+                flex-direction: column;
+            }
+            .joystick-zone {
+                width: 200px;
+                height: 200px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="info">
+        <div id="status">Bağlanıyor...</div>
+        <div id="debug"></div>
+    </div>
+    
+    <div class="container">
+        <div class="joystick-zone" id="leftZone">
+            <div class="joystick" id="leftStick"></div>
+            <div class="label">İleri/Geri</div>
+        </div>
+        
+        <div class="joystick-zone" id="rightZone">
+            <div class="joystick" id="rightStick"></div>
+            <div class="label">Sağ/Sol</div>
+        </div>
+    </div>
+    
+    <script>
+        // WebSocket bağlantısı
+        let ws = null;
+        let wsConnected = false;
+        
+        function connectWS() {
+            const wsUrl = `ws://${window.location.hostname}:81`;
+            ws = new WebSocket(wsUrl);
+            
+            ws.onopen = () => {
+                wsConnected = true;
+                document.getElementById('status').innerText = '✓ Bağlı';
+            };
+            
+            ws.onclose = () => {
+                wsConnected = false;
+                document.getElementById('status').innerText = '✗ Bağlantı kesildi';
+                setTimeout(connectWS, 1000);
+            };
+        }
+        
+        connectWS();
+        
+        // Joystick değerleri
+        let leftValue = 0;  // İleri/Geri (-100 to 100)
+        let rightValue = 0; // Sağ/Sol (-100 to 100)
+        
+        // Son gönderilen değerler (gereksiz gönderimi engellemek için)
+        let lastSentLeft = 0;
+        let lastSentRight = 0;
+        
+        // Motor kontrolü gönder
+        function sendMotorCommand() {
+            if (!wsConnected) return;
+            
+            // Motor hızlarını hesapla
+            const leftMotor = Math.round((leftValue + rightValue) * 10);
+            const rightMotor = Math.round((leftValue - rightValue) * 10);
+            
+            // Limit -1000 to 1000
+            const left = Math.max(-1000, Math.min(1000, leftMotor));
+            const right = Math.max(-1000, Math.min(1000, rightMotor));
+            
+            // SADECE değer değiştiğinde gönder!
+            if (left === lastSentLeft && right === lastSentRight) {
+                return; // Aynı değer, gönderme
+            }
+            
+            lastSentLeft = left;
+            lastSentRight = right;
+            
+            const payload = {
+                cmd: "custom",
+                left: left,
+                right: right
+            };
+            
+            ws.send(JSON.stringify(payload));
+            document.getElementById('debug').innerText = `L:${left} R:${right}`;
+        }
+        
+        // Joystick kontrol fonksiyonu
+        function setupJoystick(zoneId, stickId, isVertical) {
+            const zone = document.getElementById(zoneId);
+            const stick = document.getElementById(stickId);
+            
+            let isDragging = false;
+            let startX = 0, startY = 0;
+            const maxDistance = 75; // Max hareket mesafesi
+            
+            function handleStart(e) {
+                isDragging = true;
+                e.preventDefault();
+            }
+            
+            function handleMove(e) {
+                if (!isDragging) return;
+                e.preventDefault();
+                
+                const rect = zone.getBoundingClientRect();
+                const centerX = rect.width / 2;
+                const centerY = rect.height / 2;
+                
+                let clientX, clientY;
+                if (e.touches) {
+                    clientX = e.touches[0].clientX - rect.left;
+                    clientY = e.touches[0].clientY - rect.top;
+                } else {
+                    clientX = e.clientX - rect.left;
+                    clientY = e.clientY - rect.top;
+                }
+                
+                let deltaX = clientX - centerX;
+                let deltaY = clientY - centerY;
+                
+                // Mesafeyi sınırla
+                const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+                if (distance > maxDistance) {
+                    const angle = Math.atan2(deltaY, deltaX);
+                    deltaX = Math.cos(angle) * maxDistance;
+                    deltaY = Math.sin(angle) * maxDistance;
+                }
+                
+                // Stick pozisyonunu güncelle
+                stick.style.transform = `translate(calc(-50% + ${deltaX}px), calc(-50% + ${deltaY}px))`;
+                
+                // Değeri güncelle
+                if (isVertical) {
+                    // Y eksenini kullan, ters çevir (yukarı = pozitif)
+                    leftValue = Math.round((-deltaY / maxDistance) * 100);
+                } else {
+                    // X eksenini kullan
+                    rightValue = Math.round((deltaX / maxDistance) * 100);
+                }
+                
+                sendMotorCommand();
+            }
+            
+            function handleEnd(e) {
+                isDragging = false;
+                e.preventDefault();
+                
+                // Stick'i merkeze getir
+                stick.style.transform = 'translate(-50%, -50%)';
+                
+                // Değeri sıfırla
+                if (isVertical) {
+                    leftValue = 0;
+                } else {
+                    rightValue = 0;
+                }
+                
+                sendMotorCommand();
+            }
+            
+            // Touch events
+            stick.addEventListener('touchstart', handleStart);
+            zone.addEventListener('touchmove', handleMove);
+            zone.addEventListener('touchend', handleEnd);
+            zone.addEventListener('touchcancel', handleEnd);
+            
+            // Mouse events
+            stick.addEventListener('mousedown', handleStart);
+            zone.addEventListener('mousemove', handleMove);
+            zone.addEventListener('mouseup', handleEnd);
+            zone.addEventListener('mouseleave', handleEnd);
+        }
+        
+        // Sol joystick (dikey - ileri/geri)
+        setupJoystick('leftZone', 'leftStick', true);
+        
+        // Sağ joystick (yatay - sağ/sol)
+        setupJoystick('rightZone', 'rightStick', false);
+    </script>
+</body>
+</html>

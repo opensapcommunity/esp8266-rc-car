@@ -185,30 +185,61 @@ void MotorController::smoothTurn(int leftSpeed, int rightSpeed) {
     Serial.printf("smoothTurn çalıştırılıyor: leftSpeed=%d, rightSpeed=%d\n", leftSpeed, rightSpeed);
     digitalWrite(STBY, HIGH);
     
+    // Minimum PWM eşiği (butonlar 150 ile çalışıyor)
+    const int MIN_PWM = 150;
+    
     // Sol motor
-    if (leftSpeed >= 0) {
+    if (leftSpeed == 0) {
+        // Tam dur
+        digitalWrite(AIN1, LOW);
+        digitalWrite(AIN2, LOW);
+        analogWrite(PWMA, 0);
+        Serial.println("Sol motor DUR");
+    } else if (leftSpeed > 0) {
         Serial.println("Sol motor ileri");
         digitalWrite(AIN1, HIGH);
         digitalWrite(AIN2, LOW);
-        analogWrite(PWMA, abs(leftSpeed));
+        // Minimum eşiği uygula
+        int pwm = abs(leftSpeed);
+        if (pwm < MIN_PWM) pwm = MIN_PWM;
+        analogWrite(PWMA, pwm);
+        Serial.printf("  PWM: %d\n", pwm);
     } else {
         Serial.println("Sol motor geri");
         digitalWrite(AIN1, LOW);
         digitalWrite(AIN2, HIGH);
-        analogWrite(PWMA, abs(leftSpeed));
+        // Minimum eşiği uygula
+        int pwm = abs(leftSpeed);
+        if (pwm < MIN_PWM) pwm = MIN_PWM;
+        analogWrite(PWMA, pwm);
+        Serial.printf("  PWM: %d\n", pwm);
     }
     
     // Sağ motor
-    if (rightSpeed >= 0) {
+    if (rightSpeed == 0) {
+        // Tam dur
+        digitalWrite(BIN1, LOW);
+        digitalWrite(BIN2, LOW);
+        analogWrite(PWMB, 0);
+        Serial.println("Sağ motor DUR");
+    } else if (rightSpeed > 0) {
         Serial.println("Sağ motor ileri");
         digitalWrite(BIN1, HIGH);
         digitalWrite(BIN2, LOW);
-        analogWrite(PWMB, abs(rightSpeed));
+        // Minimum eşiği uygula
+        int pwm = abs(rightSpeed);
+        if (pwm < MIN_PWM) pwm = MIN_PWM;
+        analogWrite(PWMB, pwm);
+        Serial.printf("  PWM: %d\n", pwm);
     } else {
         Serial.println("Sağ motor geri");
         digitalWrite(BIN1, LOW);
         digitalWrite(BIN2, HIGH);
-        analogWrite(PWMB, abs(rightSpeed));
+        // Minimum eşiği uygula
+        int pwm = abs(rightSpeed);
+        if (pwm < MIN_PWM) pwm = MIN_PWM;
+        analogWrite(PWMB, pwm);
+        Serial.printf("  PWM: %d\n", pwm);
     }
     
     Serial.println("smoothTurn tamamlandı");

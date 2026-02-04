@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Motor Test</title>
+    <style>
+        body {
+            font-family: Arial;
+            padding: 20px;
+            background: #333;
+            color: white;
+        }
+        button {
+            font-size: 24px;
+            padding: 20px 40px;
+            margin: 10px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+        }
+        button:active {
+            background: #45a049;
+        }
+        #log {
+            margin-top: 20px;
+            padding: 10px;
+            background: #000;
+            border-radius: 5px;
+            max-height: 300px;
+            overflow-y: scroll;
+            font-family: monospace;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Motor Test</h1>
+    <div>
+        <button onclick="testMotor(1000, 1000)">İleri</button><br>
+        <button onclick="testMotor(-1000, -1000)">Geri</button><br>
+        <button onclick="testMotor(1000, -1000)">Sağ</button><br>
+        <button onclick="testMotor(-1000, 1000)">Sol</button><br>
+        <button onclick="testMotor(0, 0)">DUR</button>
+    </div>
+    <div id="log"></div>
+    
+    <script>
+        let ws = null;
+        let wsConnected = false;
+        
+        function log(msg) {
+            const logDiv = document.getElementById('log');
+            const time = new Date().toLocaleTimeString();
+            logDiv.innerHTML += `[${time}] ${msg}<br>`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+        
+        function connectWebSocket() {
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${protocol}//${window.location.hostname}:81`;
+            
+            ws = new WebSocket(wsUrl);
+            
+            ws.onopen = () => {
+                wsConnected = true;
+                log('✓ WebSocket bağlandı');
+            };
+            
+            ws.onclose = () => {
+                wsConnected = false;
+                log('✗ WebSocket kapandı');
+                setTimeout(connectWebSocket, 1000);
+            };
+            
+            ws.onerror = (error) => {
+                log('✗ WebSocket hatası: ' + error);
+            };
+        }
+        
+        function testMotor(left, right) {
+            if (!wsConnected) {
+                log('✗ WebSocket bağlı değil!');
+                return;
+            }
+            
+            const payload = {
+                cmd: "custom",
+                left: left,
+                right: right
+            };
+            
+            log(`→ Gönderiliyor: ${JSON.stringify(payload)}`);
+            ws.send(JSON.stringify(payload));
+        }
+        
+        connectWebSocket();
+        log('Sayfa yüklendi');
+    </script>
+</body>
+</html>

@@ -204,6 +204,10 @@ function initHorizontalJoystick() {
 // ============================================================================
 // ESP8266'ya Veri Gönderme (Direkt - hızlanma yok)
 // ============================================================================
+// Son gönderilen değerleri tut (değer değişmediğinde tekrar gönderme)
+let lastSentLeft = 0;
+let lastSentRight = 0;
+
 function sendToESP() {
     // Joystick değerlerini kombinle
     const vertical = joystickValues.vertical.forward || 0;
@@ -216,6 +220,14 @@ function sendToESP() {
     // PWM değerlerine çevir (-100..100 -> -1000..1000)
     const leftPWM = leftSpeed * 10;
     const rightPWM = rightSpeed * 10;
+    
+    // KRİTİK: Değer değişmemişse tekrar gönderme!
+    if (leftPWM === lastSentLeft && rightPWM === lastSentRight) {
+        return; // Aynı değer, gönderme
+    }
+    
+    lastSentLeft = leftPWM;
+    lastSentRight = rightPWM;
     
     console.log(`[DEBUG] V=${vertical}, H=${horizontal} | Motor: L=${leftPWM}, R=${rightPWM}`);
     

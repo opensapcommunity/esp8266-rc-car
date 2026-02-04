@@ -3,9 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <title>RC Araba - Joystick Kontrol</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script src="nipplejs.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -189,6 +191,27 @@
 
         .zone#zone-horizontal .joystick-label {
             background: rgba(231, 76, 60, 0.8);
+        }
+        
+        .joystick-stick {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 80px;
+            height: 80px;
+            background: radial-gradient(circle, rgba(52, 152, 219, 0.9) 0%, rgba(41, 128, 185, 1) 100%);
+            border: 3px solid rgba(255, 255, 255, 0.8);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            cursor: grab;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            transition: box-shadow 0.2s;
+            touch-action: none;
+        }
+        
+        .joystick-stick:active {
+            cursor: grabbing;
+            box-shadow: 0 6px 20px rgba(52, 152, 219, 0.5);
         }
 
         .output {
@@ -395,6 +418,206 @@
     <!-- Toast -->
     <div id="toast" class="toast"></div>
 
-    <script src="joystick.js"></script>
+    <script>
+        // WebSocket bağlantısı
+        let ws = null;
+        let wsConnected = false;
+        let leftValue = 0;   // Sol joystick (-100 to 100)
+        let rightValue = 0;  // Sağ joystick (-100 to 100)
+        let lastSentLeft = 0;
+        let lastSentRight = 0;
+        
+        // WebSocket bağlantısı
+        function connectWebSocket() {
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${protocol}//${window.location.hostname}:81`;
+            
+            ws = new WebSocket(wsUrl);
+            
+            ws.onopen = () => {
+                wsConnected = true;
+                updateConnectionStatus(true);
+                showToast('Bağlantı kuruldu ✓');
+                document.getElementById('wsStatus').textContent = 'Bağlı';
+            };
+            
+            ws.onerror = () => {
+                wsConnected = false;
+                updateConnectionStatus(false);
+            };
+            
+            ws.onclose = () => {
+                wsConnected = false;
+                updateConnectionStatus(false);
+                document.getElementById('wsStatus').textContent = 'Bağlantı koptu';
+                setTimeout(connectWebSocket, 3000);
+            };
+        }
+        
+        function sendMotorCommand() {
+            if (!wsConnected) return;
+            
+            const leftMotor = Math.round((leftValue + rightValue) * 10);
+            const rightMotor = Math.round((leftValue - rightValue) * 10);
+            const left = Math.max(-1000, Math.min(1000, leftMotor));
+            const right = Math.max(-1000, Math.min(1000, rightMotor));
+            
+            // Sadece değer değiştiğinde gönder
+            if (left === lastSentLeft && right === lastSentRight) {
+                return;
+            }
+            
+            lastSentLeft = left;
+            lastSentRight = right;
+            
+            const payload = {cmd: "custom", left: left, right: right};
+            ws.send(JSON.stringify(payload));
+            
+            // Debug çıktısı
+            document.getElementById('output-vertical').textContent = 
+                `İleri/Geri: ${leftValue}\nMotor: ${left}`;
+            document.getElementById('output-horizontal').textContent = 
+                `Sağ/Sol: ${rightValue}\nMotor: ${right}`;
+        }
+        
+        function updateConnectionStatus(connected) {
+            const statusEl = document.getElementById('connectionStatus');
+            if (connected) {
+                statusEl.innerHTML = '<i class="fas fa-wifi"></i> Bağlı';
+                statusEl.classList.add('connected');
+            } else {
+                statusEl.innerHTML = '<i class="fas fa-wifi-slash"></i> Bağlı Değil';
+                statusEl.classList.remove('connected');
+            }
+        }
+        
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 3000);
+        }
+        
+        function fetchIPAddress() {
+            fetch('/api/ip')
+                .then(r => r.json())
+                .then(data => {
+                    document.getElementById('ipAddress').textContent = data.ip || '192.168.4.1';
+                })
+                .catch(() => {
+                    document.getElementById('ipAddress').textContent = '192.168.4.1';
+                });
+        }
+        
+        // Joystick kurulumu
+        function setupJoystick(zoneId, stickId, isVertical) {
+            const zone = document.getElementById(zoneId);
+            const stick = zone.querySelector('.joystick-stick');
+            let isDragging = false;
+            
+            function handleStart(e) {
+                isDragging = true;
+                e.preventDefault();
+            }
+            
+            function handleMove(e) {
+                if (!isDragging) return;
+                e.preventDefault();
+                
+                const rect = zone.getBoundingClientRect();
+                const centerX = rect.width / 2;
+                const centerY = rect.height / 2;
+                const maxDistance = Math.min(rect.width, rect.height) / 2 - 30;
+                
+                let clientX, clientY;
+                if (e.type.startsWith('touch')) {
+                    clientX = e.touches[0].clientX - rect.left;
+                    clientY = e.touches[0].clientY - rect.top;
+                } else {
+                    clientX = e.clientX - rect.left;
+                    clientY = e.clientY - rect.top;
+                }
+                
+                let deltaX = clientX - centerX;
+                let deltaY = clientY - centerY;
+                
+                const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+                if (distance > maxDistance) {
+                    const angle = Math.atan2(deltaY, deltaX);
+                    deltaX = Math.cos(angle) * maxDistance;
+                    deltaY = Math.sin(angle) * maxDistance;
+                }
+                
+                stick.style.transform = `translate(calc(-50% + ${deltaX}px), calc(-50% + ${deltaY}px))`;
+                
+                if (isVertical) {
+                    leftValue = Math.round((-deltaY / maxDistance) * 100);
+                } else {
+                    rightValue = Math.round((deltaX / maxDistance) * 100);
+                }
+                
+                sendMotorCommand();
+            }
+            
+            function handleEnd(e) {
+                isDragging = false;
+                e.preventDefault();
+                
+                stick.style.transform = 'translate(-50%, -50%)';
+                
+                if (isVertical) {
+                    leftValue = 0;
+                } else {
+                    rightValue = 0;
+                }
+                
+                sendMotorCommand();
+            }
+            
+            stick.addEventListener('touchstart', handleStart);
+            zone.addEventListener('touchmove', handleMove);
+            zone.addEventListener('touchend', handleEnd);
+            zone.addEventListener('touchcancel', handleEnd);
+            
+            stick.addEventListener('mousedown', handleStart);
+            zone.addEventListener('mousemove', handleMove);
+            zone.addEventListener('mouseup', handleEnd);
+            zone.addEventListener('mouseleave', handleEnd);
+        }
+        
+        // Joystick'leri ekle (görsel ögeler)
+        function addJoystickStick(zoneId) {
+            const zone = document.getElementById(zoneId);
+            const stick = document.createElement('div');
+            stick.className = 'joystick-stick';
+            zone.appendChild(stick);
+        }
+        
+        // Başlangıç
+        document.addEventListener('DOMContentLoaded', () => {
+            addJoystickStick('zone-vertical');
+            addJoystickStick('zone-horizontal');
+            
+            setupJoystick('zone-vertical', null, true);
+            setupJoystick('zone-horizontal', null, false);
+            
+            connectWebSocket();
+            fetchIPAddress();
+            
+            // Başlangıçta durdur
+            setTimeout(() => {
+                const payload = {cmd: "custom", left: 0, right: 0};
+                if (wsConnected) ws.send(JSON.stringify(payload));
+            }, 200);
+        });
+        
+        // Sayfa kapatılırken durdur
+        window.addEventListener('beforeunload', () => {
+            if (wsConnected && ws) {
+                ws.send(JSON.stringify({cmd: "custom", left: 0, right: 0}));
+                ws.close();
+            }
+        });
+    </script>
 </body>
 </html>
