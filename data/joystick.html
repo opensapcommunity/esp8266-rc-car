@@ -514,10 +514,16 @@
             const zone = document.getElementById(zoneId);
             const stick = zone.querySelector('.joystick-stick');
             let isDragging = false;
+            let activePointerId = null;
             
             function handleStart(e) {
                 isDragging = true;
                 e.preventDefault();
+
+                if (e.type.startsWith('touch')) {
+                    const touch = e.changedTouches[0];
+                    activePointerId = touch.identifier;
+                }
             }
             
             function handleMove(e) {
@@ -531,8 +537,12 @@
                 
                 let clientX, clientY;
                 if (e.type.startsWith('touch')) {
-                    clientX = e.touches[0].clientX - rect.left;
-                    clientY = e.touches[0].clientY - rect.top;
+                    let touch = Array.from(e.touches).find(t => t.identifier === activePointerId);
+                    if (!touch) {
+                        touch = e.touches[0];
+                    }
+                    clientX = touch.clientX - rect.left;
+                    clientY = touch.clientY - rect.top;
                 } else {
                     clientX = e.clientX - rect.left;
                     clientY = e.clientY - rect.top;
@@ -568,17 +578,26 @@
             }
             
             function handleEnd(e) {
+                if (e.type.startsWith('touch')) {
+                    const touch = Array.from(e.changedTouches).find(t => t.identifier === activePointerId);
+                    if (!touch) {
+                        return;
+                    }
+                }
+
                 isDragging = false;
                 e.preventDefault();
                 
                 stick.style.transform = 'translate(-50%, -50%)';
-                
+
                 if (isVertical) {
                     leftValue = 0;
                 } else {
                     rightValue = 0;
                 }
-                
+
+                activePointerId = null;
+
                 sendMotorCommand();
             }
             
