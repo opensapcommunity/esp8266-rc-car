@@ -75,6 +75,17 @@
             max-width: 200px;
         }
 
+        .setting {
+            margin-top: 8px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .setting input[type="range"] {
+            width: 180px;
+        }
+
         .sound-panel {
             position: fixed;
             bottom: 15px;
@@ -117,6 +128,10 @@
     <div class="info">
         <div id="status">Bağlanıyor...</div>
         <div id="debug"></div>
+        <div class="setting">
+            <label>Ölü Bölge: <span id="deadZoneValue">12</span>%</label>
+            <input id="deadZoneSlider" type="range" min="0" max="30" value="12">
+        </div>
     </div>
     
     <div class="container">
@@ -174,6 +189,27 @@
         let lastSentLeft = 0;
         let lastSentRight = 0;
         
+        // Deadzone ayarı (localStorage)
+        let deadZonePercent = 12;
+
+        function loadDeadZone() {
+            const saved = parseInt(localStorage.getItem('deadZonePercent'), 10);
+            if (!isNaN(saved)) {
+                deadZonePercent = Math.max(0, Math.min(30, saved));
+            }
+            const slider = document.getElementById('deadZoneSlider');
+            const valueEl = document.getElementById('deadZoneValue');
+            if (slider) slider.value = deadZonePercent;
+            if (valueEl) valueEl.textContent = deadZonePercent;
+        }
+
+        function setDeadZone(val) {
+            deadZonePercent = Math.max(0, Math.min(30, val));
+            localStorage.setItem('deadZonePercent', deadZonePercent);
+            const valueEl = document.getElementById('deadZoneValue');
+            if (valueEl) valueEl.textContent = deadZonePercent;
+        }
+
         // Motor kontrolü gönder
         function sendMotorCommand() {
             if (!wsConnected) return;
@@ -253,9 +289,11 @@
                 if (isVertical) {
                     // Y eksenini kullan, ters çevir (yukarı = pozitif)
                     leftValue = Math.round((-deltaY / maxDistance) * 100);
+                    if (Math.abs(leftValue) < deadZonePercent) leftValue = 0;
                 } else {
                     // X eksenini kullan
                     rightValue = Math.round((deltaX / maxDistance) * 100);
+                    if (Math.abs(rightValue) < deadZonePercent) rightValue = 0;
                 }
                 
                 sendMotorCommand();
@@ -291,6 +329,13 @@
             zone.addEventListener('mouseleave', handleEnd);
         }
         
+        // Deadzone slider
+        loadDeadZone();
+        const deadZoneSlider = document.getElementById('deadZoneSlider');
+        if (deadZoneSlider) {
+            deadZoneSlider.addEventListener('input', (e) => setDeadZone(parseInt(e.target.value, 10)));
+        }
+
         // Sol joystick (dikey - ileri/geri)
         setupJoystick('leftZone', 'leftStick', true);
         

@@ -307,6 +307,26 @@
             color: white;
         }
 
+        .deadzone-panel {
+            position: fixed;
+            bottom: 10px;
+            right: 10px;
+            background: rgba(44, 62, 80, 0.85);
+            padding: 8px 10px;
+            border-radius: 8px;
+            color: white;
+            font-size: 0.75rem;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            min-width: 160px;
+        }
+
+        .deadzone-panel input[type="range"] {
+            width: 160px;
+        }
+
         /* Responsive - Mobil Yatay Mod Optimizasyonu */
         @media (max-width: 900px) and (orientation: landscape) {
             header h1 {
@@ -453,6 +473,11 @@
         <button class="sound-btn stop" onclick="sendSound('stop')">Durdur</button>
     </div>
 
+    <div class="deadzone-panel">
+        <label>Ölü Bölge: <span id="deadZoneValue">12</span>%</label>
+        <input id="deadZoneSlider" type="range" min="0" max="30" value="12">
+    </div>
+
     <script>
         // WebSocket bağlantısı
         let ws = null;
@@ -494,13 +519,34 @@
             ws.send(JSON.stringify({ cmd: "sound", action: action }));
         }
         
+        // Deadzone ayarı (localStorage)
+        let deadZonePercent = 12;
+
+        function loadDeadZone() {
+            const saved = parseInt(localStorage.getItem('deadZonePercent'), 10);
+            if (!isNaN(saved)) {
+                deadZonePercent = Math.max(0, Math.min(30, saved));
+            }
+            const slider = document.getElementById('deadZoneSlider');
+            const valueEl = document.getElementById('deadZoneValue');
+            if (slider) slider.value = deadZonePercent;
+            if (valueEl) valueEl.textContent = deadZonePercent;
+        }
+
+        function setDeadZone(val) {
+            deadZonePercent = Math.max(0, Math.min(30, val));
+            localStorage.setItem('deadZonePercent', deadZonePercent);
+            const valueEl = document.getElementById('deadZoneValue');
+            if (valueEl) valueEl.textContent = deadZonePercent;
+        }
+
         function sendMotorCommand() {
             if (!wsConnected) return;
             
-            const leftMotor = Math.round((leftValue + rightValue) * 10);
-            const rightMotor = Math.round((leftValue - rightValue) * 10);
-            const left = Math.max(-1000, Math.min(1000, leftMotor));
-            const right = Math.max(-1000, Math.min(1000, rightMotor));
+            const leftMotor = Math.round((leftValue + rightValue) * 2.5);
+            const rightMotor = Math.round((leftValue - rightValue) * 2.5);
+            const left = Math.max(-250, Math.min(250, leftMotor));
+            const right = Math.max(-250, Math.min(250, rightMotor));
             
             // Sadece değer değiştiğinde gönder
             if (left === lastSentLeft && right === lastSentRight) {
@@ -610,8 +656,10 @@
                 
                 if (isVertical) {
                     leftValue = Math.round((-deltaY / maxDistance) * 100);
+                    if (Math.abs(leftValue) < deadZonePercent) leftValue = 0;
                 } else {
                     rightValue = Math.round((deltaX / maxDistance) * 100);
+                    if (Math.abs(rightValue) < deadZonePercent) rightValue = 0;
                 }
                 
                 sendMotorCommand();
@@ -664,6 +712,12 @@
         document.addEventListener('DOMContentLoaded', () => {
             addJoystickStick('zone-vertical');
             addJoystickStick('zone-horizontal');
+
+            loadDeadZone();
+            const deadZoneSlider = document.getElementById('deadZoneSlider');
+            if (deadZoneSlider) {
+                deadZoneSlider.addEventListener('input', (e) => setDeadZone(parseInt(e.target.value, 10)));
+            }
             
             setupJoystick('zone-vertical', null, true);
             setupJoystick('zone-horizontal', null, false);
